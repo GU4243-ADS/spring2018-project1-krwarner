@@ -62,33 +62,33 @@ Building off the sentiment and word usage, you can also begin to understand the 
 
 For EAP we see that he is an INTP, doing a brief Google search we can see that the assessment is actually quite accurate. Depending on whom you ask, he is either INTP of INFP, which explains why his T and F scores are the closest together. 
 
-![EAP I](figs/eap_i.png)
+![EAP I](figs/eap_i.PNG)
 
-![EAP N](figs/eap_n.png)
+![EAP N](figs/eap_n.PNG)
 
-![EAP T](figs/eap_t.png)
+![EAP T](figs/eap_t.PNG)
 
-![EAP P](figs/eap_p.png)
+![EAP P](figs/eap_p.PNG)
 
 For HPL we see that he is ENFP, the internet seems to think that he is INFP, but if you have read HPL you can see how he might be the most extraverted of these authors. 
 
-![HPL E](figs/hpl_e.png)
+![HPL E](figs/hpl_e.PNG)
 
-![HPL N](figs/hpl_n.png)
+![HPL N](figs/hpl_n.PNG)
 
-![HPL F](figs/hpl_f.png)
+![HPL F](figs/hpl_f.PNG)
 
-![HPL P](figs/hpl_p.png)
+![HPL P](figs/hpl_p.PNG)
 
 For MWS we see that she is INFP, again, the internet seems to confirm this finding. What is interesting about MWS is that her scores are the most drastic in a particular direction, which might suggest that she has a much more singular way of writing compared to the other two, which would allow us to build inference from this. 
 
-![MWS I](figs/mws_i.png)
+![MWS I](figs/mws_i.PNG)
 
-![MWS N](figs/mws_n.png)
+![MWS N](figs/mws_n.PNG)
 
-![MWS f](figs/mws_f.png)
+![MWS f](figs/mws_f.PNG)
 
-![MWS P](figs/mws_p.png)
+![MWS P](figs/mws_p.PNG)
 
 Again, a resampling method like a bootstrap would be good to do on analysis like this so that we can get a distribution that could help us more accurately define each author. 
 
