@@ -1,0 +1,543 @@
+---
+title: "SPOOKY Data Analysis and Inference"
+author: "Kenny Warner krw2133"
+date: "February 5, 2018"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r opts, echo = FALSE}
+knitr::opts_chunk$set(
+  fig.path = "images/"
+)
+```
+
+# Introduction
+
+This files contains text mining analysis of the SPOOKY data. It begins with basic analysis and works to explain further techniques and more advanced analysis that can help identify text by certain authors. You should be able to put this file in the `doc` folder of your `Project 1` repository and it should just run (provided you have `multiplot.R` in the `libs` folder and `spooky.csv` in the `data` folder).
+
+## Setup the libraries
+First we want to install and load libraries we need along the way.  Note that the following code is completely reproducible -- you don't need to add any code on your own to make it run.
+
+```{r, message = F, warning = F}
+packages.used <- c("ggplot2", "dplyr", "tibble", "tidyr",  "stringr", "tidytext", "topicmodels", "wordcloud", "ggridges")
+
+# check packages that need to be installed.
+packages.needed <- setdiff(packages.used, intersect(installed.packages()[,1], packages.used))
+
+# install additional packages
+if(length(packages.needed) > 0) {
+  install.packages(packages.needed, dependencies = TRUE, repos = 'http://cran.us.r-project.org')
+}
+
+library(ggplot2)
+library(dplyr)
+library(tibble)
+library(tidyr)
+library(stringr)
+library(tidytext)
+library(topicmodels)
+library(wordcloud)
+library(ggridges)
+
+source("../libs/multiplot.R")
+```
+
+## Read in the data
+The following code assumes that the dataset `spooky.csv` lives in a `data` folder (and that we are inside a `docs` folder).
+
+```{r}
+spooky <- read.csv('../data/spooky.csv', as.is = TRUE)
+```
+
+## An overview of the data structure and content
+
+Let's first remind ourselves of the structure of the data.
+```{r}
+head(spooky)
+summary(spooky)
+```
+
+We see from the above that each row of our data contains a unique ID, a single sentence text excerpt, and an abbreviated author name. `HPL` is Lovecraft, `MWS` is Shelly, and `EAP` is Poe.  We finally note that there are no missing values, and we change author name to be a factor variable, which will help us later on.
+
+```{r}
+sum(is.na(spooky))
+spooky$author <- as.factor(spooky$author)
+```
+
+## Data Cleaning
+
+We first use the `unnest_tokens()` function to drop all punctuation and transform all words into lower case.  At least for now, the punctuation isn't really important to our analysis -- we want to study the words.  In addition, `tidytext` contains a dictionary of stop words, like "and" or "next", that we will get rid of for our analysis, the idea being that the non-common words (...maybe the SPOOKY words) that the authors use will be more interesting.  If this is new to you, here's a textbook that can help: *[Text Mining with R; A Tidy Approach](https://www.tidytextmining.com)*.  It teaches the basic handling of natural language data in `R` using tools from the "tidyverse".  The tidy text format is a table with one token per row, where a token is a word.
+
+```{r}
+# Make a table with one word per row including common words
+spooky_wrd <- unnest_tokens(spooky, word, text)
+write.csv(spooky_wrd, "spooky_wrd.csv")
+
+
+# Make a table with one word per row and remove `stop words` (i.e. the common words).
+spooky_wrd_stop <- unnest_tokens(spooky, word, text)
+
+spooky_wrd_stop <- anti_join(spooky_wrd, stop_words, by = "word")
+```
+
+## Word Frequency
+
+Now we study some of the most common words in the entire data set.  With the below code we plot the fifty most common words in the entire datset. We see that "time", "life", and "night" all appear frequently.
+
+```{r}
+# Words is a list of words, and freqs their frequencies
+words <- count(group_by(spooky_wrd, word))$word
+freqs <- count(group_by(spooky_wrd, word))$n
+
+head(sort(freqs, decreasing = TRUE))
+wordcloud(words, freqs, max.words = 50, color = c("purple4", "red4", "black"))
+
+
+# Words_stop is a list of words, and freqs their frequencies from the list of commmon words
+words_stop <- count(group_by(spooky_wrd_stop, word))$word
+freqs_stop <- count(group_by(spooky_wrd_stop, word))$n
+
+head(sort(freqs, decreasing = TRUE))
+wordcloud(words_stop, freqs_stop, max.words = 50, color = c("purple4", "red4", "black"))
+```
+
+We can compare the way the authors use the most frequent words too.
+
+```{r}
+# Counts number of times each author used each wor with stop words
+author_words <- count(group_by(spooky_wrd, word, author))
+
+# Counts number of times each word was use with stop words
+all_words    <- rename(count(group_by(spooky_wrd, word)), all = n)
+
+author_words <- left_join(author_words, all_words, by = "word")
+author_words <- arrange(author_words, desc(all))
+author_words <- ungroup(head(author_words, 81))
+  
+ggplot(author_words) +
+  geom_col(aes(reorder(word, all, FUN = min), n, fill = author)) +
+  xlab(NULL) +
+  coord_flip() +
+  facet_wrap(~ author) +
+  theme(legend.position = "none")
+
+
+# Counts number of times each author used each unique word
+author_words_stop <- count(group_by(spooky_wrd_stop, word, author))
+
+# Counts number of times each unique word was used
+all_words_stop    <- rename(count(group_by(spooky_wrd_stop, word)), all = n)
+
+author_words_stop <- left_join(author_words_stop, all_words_stop, by = "word")
+author_words_stop <- arrange(author_words_stop, desc(all))
+author_words_stop <- ungroup(head(author_words_stop, 81))
+  
+ggplot(author_words_stop) +
+  geom_col(aes(reorder(word, all, FUN = min), n, fill = author)) +
+  xlab(NULL) +
+  coord_flip() +
+  facet_wrap(~ author) +
+  theme(legend.position = "none")
+
+```
+
+```{r}
+
+#Load csv files of single words from each individual author
+#These files were generated using a SQL Server proc
+spooky_eap <- read.csv('../data/spooky_words_eap.csv', as.is = TRUE)
+spooky_hpl <- read.csv('../data/spooky_words_hpl.csv', as.is = TRUE)
+spooky_mws <- read.csv('../data/spooky_words_mws.csv', as.is = TRUE)
+
+#Create for loop to create a vector with the gaps between each use of a particular word. ie. "and" how many words until the next use of "and" or "life", etc. Intersting words to look at include
+
+#First looking at interesting generic words: and, which, but
+#Starting with and for EAP
+
+eap_and_vec <- c()
+count_freq <- 0
+i <- 1
+
+while (i < length(spooky_eap$X_word_)){
+  if(spooky_eap[i,] != "and") {
+    count_freq <- count_freq + 1
+  }
+  else {
+    eap_and_vec <- append(eap_and_vec, count_freq)
+    count_freq <- 0
+  }
+  i <- i + 1
+}
+
+mean_eap_and <- mean(eap_and_vec)
+
+
+#Which, EAP
+
+eap_which_vec <- c()
+count_freq <- 0
+i <- 1
+
+while (i < length(spooky_eap$X_word_)){
+  if(spooky_eap[i,] != "which") {
+    count_freq <- count_freq + 1
+  }
+  else {
+    eap_which_vec <- append(eap_which_vec, count_freq)
+    count_freq <- 0
+  }
+  i <- i + 1
+}
+
+mean_eap_which <- mean(eap_which_vec)
+
+#But, EAP
+
+eap_but_vec <- c()
+count_freq <- 0
+i <- 1
+
+while (i < length(spooky_eap$X_word_)){
+  if(spooky_eap[i,] != "but") {
+    count_freq <- count_freq + 1
+  }
+  else {
+    eap_but_vec <- append(eap_but_vec, count_freq)
+    count_freq <- 0
+  }
+  i <- i + 1
+}
+
+mean_eap_but <- mean(eap_but_vec)
+
+
+#And, HPL
+
+hpl_and_vec <- c()
+count_freq <- 0
+i <- 1
+
+while (i < length(spooky_hpl$ï.._word_)){
+  if(spooky_hpl[i,] != "and") {
+    count_freq <- count_freq + 1
+  }
+  else {
+    hpl_and_vec <- append(hpl_and_vec, count_freq)
+    count_freq <- 0
+  }
+  i <- i + 1
+}
+
+mean_hpl_and <- mean(hpl_and_vec)
+
+
+#Which, HPL
+
+hpl_which_vec <- c()
+count_freq <- 0
+i <- 1
+
+while (i < length(spooky_hpl$ï.._word_)){
+  if(spooky_hpl[i,] != "which") {
+    count_freq <- count_freq + 1
+  }
+  else {
+    hpl_which_vec <- append(hpl_which_vec, count_freq)
+    count_freq <- 0
+  }
+  i <- i + 1
+}
+
+mean_hpl_which <- mean(hpl_which_vec)
+
+#But, HPL
+
+hpl_but_vec <- c()
+count_freq <- 0
+i <- 1
+
+while (i < length(spooky_hpl$ï.._word_)){
+  if(spooky_hpl[i,] != "but") {
+    count_freq <- count_freq + 1
+  }
+  else {
+    hpl_but_vec <- append(hpl_but_vec, count_freq)
+    count_freq <- 0
+  }
+  i <- i + 1
+}
+
+mean_hpl_but <- mean(hpl_but_vec)
+
+
+
+#And, MWS
+
+mws_and_vec <- c()
+count_freq <- 0
+i <- 1
+
+while (i < length(spooky_mws$ï.._word_)){
+  if(spooky_mws[i,] != "and") {
+    count_freq <- count_freq + 1
+  }
+  else {
+    mws_and_vec <- append(mws_and_vec, count_freq)
+    count_freq <- 0
+  }
+  i <- i + 1
+}
+
+mean_mws_and <- mean(mws_and_vec)
+
+
+#Which, MWS
+
+mws_which_vec <- c()
+count_freq <- 0
+i <- 1
+
+while (i < length(spooky_mws$ï.._word_)){
+  if(spooky_mws[i,] != "which") {
+    count_freq <- count_freq + 1
+  }
+  else {
+    mws_which_vec <- append(mws_which_vec, count_freq)
+    count_freq <- 0
+  }
+  i <- i + 1
+}
+
+mean_mws_which <- mean(mws_which_vec)
+
+#But, MWS
+
+mws_but_vec <- c()
+count_freq <- 0
+i <- 1
+
+while (i < length(spooky_mws$ï.._word_)){
+  if(spooky_mws[i,] != "but") {
+    count_freq <- count_freq + 1
+  }
+  else {
+    mws_but_vec <- append(mws_but_vec, count_freq)
+    count_freq <- 0
+  }
+  i <- i + 1
+}
+
+mean_mws_but <- mean(mws_but_vec)
+
+
+#Now you can compare the plots for each word to see how the frequency between each word changes
+
+#And plot
+plot(eap_and_vec, col="red")
+points(hpl_and_vec, col="blue")
+points(mws_and_vec, col="green")
+
+#Which plot
+plot(eap_which_vec, col="red")
+points(hpl_which_vec, col="blue")
+points(mws_which_vec, col="green")
+
+#But plot
+plot(eap_but_vec, col="red")
+points(hpl_but_vec, col="blue")
+points(mws_but_vec, col="green")
+
+#Next analyze a histogram of the means for each author
+author_means <- c(mean_eap_and, mean_hpl_and, mean_mws_and, mean_eap_but, mean_hpl_but, mean_mws_but, mean_eap_which, mean_hpl_which, mean_mws_which)
+num_means <- table(author_means)
+
+colors <- c("darkturquoise","darkslategray2", "darkslategray1", "darkviolet", "darkorchid", "darkorchid1", "chartreuse1", "chartreuse2", "chartreuse3")
+
+barplot(author_means, col=colors, ylab = "Mean Frequency Between Last Usage", xlab = "And, But, Which")
+
+
+#EAP unique words: Time
+
+eap_time_vec <- c()
+count_freq <- 0
+i <- 1
+
+while (i < length(spooky_eap$X_word_)){
+  if(spooky_eap[i,] != "time") {
+    count_freq <- count_freq + 1
+  }
+  else {
+    eap_time_vec <- append(eap_time_vec, count_freq)
+    count_freq <- 0
+  }
+  i <- i + 1
+}
+
+mean_eap_time <- mean(eap_time_vec)
+mean_eap_time
+
+
+#For comparison, as you can see from what was done with that common words, here is HPL
+
+hpl_time_vec <- c()
+count_freq <- 0
+i <- 1
+
+while (i < length(spooky_hpl$ï.._word_)){
+  if(spooky_hpl[i,] != "time") {
+    count_freq <- count_freq + 1
+  }
+  else {
+    hpl_time_vec <- append(hpl_time_vec, count_freq)
+    count_freq <- 0
+  }
+  i <- i + 1
+}
+
+plot(eap_time_vec, col="red")
+points(hpl_time_vec, col="blue")
+mean_hpl_time <- mean(hpl_time_vec)
+mean_hpl_time
+
+
+```
+
+## Data Visualization
+
+We'll do some simple numerical summaries of the data to provide some nice visualizations.
+
+```{r, message = FALSE}
+p1 <- ggplot(spooky) +
+      geom_bar(aes(author, fill = author)) +
+      theme(legend.position = "none")
+
+
+spooky$sen_length <- str_length(spooky$text)
+head(spooky$sen_length)
+
+p2 <- ggplot(spooky) +
+      geom_density_ridges(aes(sen_length, author, fill = author)) +
+      scale_x_log10() +
+      theme(legend.position = "none") +
+      labs(x = "Sentence length [# characters]")
+
+
+spooky_wrd_stop$word_length <- str_length(spooky_wrd_stop$word)
+head(spooky_wrd_stop$word_length)
+
+p3 <- ggplot(spooky_wrd_stop) +
+      geom_density(aes(word_length, fill = author), bw = 0.05, alpha = 0.3) +
+      scale_x_log10() +
+      theme(legend.position = "none") +
+      labs(x = "Word length [# characters]")
+
+layout <- matrix(c(1, 2, 1, 3), 2, 2, byrow = TRUE)
+multiplot(p1, p2, p3, layout = layout)
+```
+
+
+## TF-IDF
+
+TF stands for term frequency or how often a word appears in a text and it is what is studied above in the word cloud. IDF stands for inverse document frequency, and it is a way to pay more attention to words that are rare within the entire set of text data that is more sophisticated than simply removing stop words.  Multiplying these two values together calculates a term's tf-idf, which is the frequency of a term adjusted for how rarely it is used.  We'll use tf-idf as a heuristic index to indicate how frequently a certain author uses a word relative to the frequency that ll the authors use the word.  Therefore we will find words that are characteristic for a specific author, a good thing to have if we are interested in solving the author identification problem.
+
+```{r}
+frequency <- count(spooky_wrd, author, word)
+tf_idf    <- bind_tf_idf(frequency, word, author, n)
+head(tf_idf)
+tail(tf_idf)
+
+tf_idf    <- arrange(tf_idf, desc(tf_idf))
+tf_idf    <- mutate(tf_idf, word = factor(word, levels = rev(unique(word))))
+
+# Grab the top thirty tf_idf scores in all the words 
+tf_idf_30 <- top_n(tf_idf, 30, tf_idf)
+
+ggplot(tf_idf_30) +
+  geom_col(aes(word, tf_idf, fill = author)) +
+  labs(x = NULL, y = "TF-IDF values") +
+  theme(legend.position = "top", axis.text.x  = element_text(angle=45, hjust=1, vjust=0.9))
+```
+
+Note that in the above, many of the words recognized by their tf-idf scores are names.  This makes sense -- if we see text referencing Raymond, Idris, or Perdita, we know almost for sure that MWS is the author.  But some non-names stand out.  EAP often uses "monsieur" and "jupiter" while HPL uses the words "bearded" and "attic" more frequently than the others.  We can also look at the most characteristic terms per author.
+
+```{r}
+# Grab the top twenty tf_idf scores in all the words for each author
+tf_idf <- ungroup(top_n(group_by(tf_idf, author), 20, tf_idf))
+  
+ggplot(tf_idf) +
+  geom_col(aes(word, tf_idf, fill = author)) +
+  labs(x = NULL, y = "tf-idf") +
+  theme(legend.position = "none") +
+  facet_wrap(~ author, ncol = 3, scales = "free") +
+  coord_flip() +
+  labs(y = "TF-IDF values")
+```
+
+# Sentiment Analysis
+
+We will use sentences as units of analysis for this part of the tutorial, as sentences are natural languge units for organizing thoughts and ideas. For each sentence, we apply sentiment analysis using [NRC sentiment lexion](http://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm). "The NRC Emotion Lexicon is a list of English words and their associations with eight basic emotions (anger, fear, anticipation, trust, surprise, sadness, joy, and disgust) and two sentiments (negative and positive). The annotations were manually done by crowdsourcing."
+
+From *[Text Mining with R; A Tidy Approach](https://www.tidytextmining.com)*, "When human readers approach text, we use our understanding of the emotional intent of words to infer whether a section of text is positive or negative, or perhaps characterized by some other more nuanced emotion like surprise or disgust.  We can also use the tools of text mining to approach the emotional content of text programmatically."  This is the goal of sentiment analysis.
+
+
+```{r}
+# Keep words that have been classified within the NRC lexicon.
+get_sentiments('nrc')
+sentiments <- inner_join(spooky_wrd, get_sentiments('nrc'), by = "word")
+
+count(sentiments, sentiment)
+count(sentiments, author, sentiment)
+
+ggplot(count(sentiments, sentiment)) + 
+  geom_col(aes(sentiment, n, fill = sentiment))
+
+ggplot(count(sentiments, author, sentiment)) + 
+  geom_col(aes(sentiment, n, fill = sentiment)) + 
+  facet_wrap(~ author) +
+  coord_flip() +
+  theme(legend.position = "none")
+```
+
+
+## Comparing Positivity
+
+Let's only study the "positive" words.  Note that the amount of "postive" words attributed to each author varies greatly, and the relative frequency of "positive" words to the other sentiments also varies between authors.
+
+```{r}
+nrc_pos <- filter(get_sentiments('nrc'), sentiment == "positive")
+nrc_pos
+
+positive <- inner_join(spooky_wrd, nrc_pos, by = "word")
+head(positive)
+count(positive, word, sort = TRUE)
+```
+
+Now we plot a frequency comparison of these "positive" words.  Namely, we show the frequencies of the overall most frequently-used positive words split between the three authors. 
+
+```{r}
+pos_words     <- count(group_by(positive, word, author))
+pos_words_all <- count(group_by(positive, word))
+
+pos_words <- left_join(pos_words, pos_words_all, by = "word")
+pos_words <- arrange(pos_words, desc(n.y))
+pos_words <- ungroup(head(pos_words, 81))
+
+# Note the above is the same as
+# pos_words <- pos_words  %>%
+#                left_join(pos_words_all, by = "word") %>%
+#                arrange(desc(n.y)) %>%
+#                head(81) %>%
+#                ungroup()
+
+ggplot(pos_words) +
+  geom_col(aes(reorder(word, n.y, FUN = min), n.x, fill = author)) +
+  xlab(NULL) +
+  coord_flip() +
+  facet_wrap(~ author) +
+  theme(legend.position = "none")
+```
+
