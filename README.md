@@ -9,9 +9,9 @@ In this step we look at word frequencies for both the unique words and common wo
 
 Next we look at the word frequencies of each individual author, to get a foundation on the language that they use and how they use it. We can see that MWS uses words like "life" and "love" far more frequently than the other authors, which gives us interesting insight into the types of subjects she may write about. When looking at the more common words, we see that EAP uses "the" significantly more than the other users, but the other common words are somewhat similar to one another, suggesting that the share similar writing tactics, and a shared language structure. 
 
-![Word Freq Common](../spring2018-project1-krwarner/figs/word_freq_com.png)
+![Word Freq Common](figs/word_freq_com.png)
 
-![Word Freq Unique](../spring2018-project1-krwarner/figs/word_freq_uni.png)
+![Word Freq Unique](figs/word_freq_uni.png)
 
 #Step 3 - Advanced Frequency Analysis
 Having the raw data in regards to frequency of words used is interesting and allows us to begin to build better inference about the authors, but it is perhaps more interesting to look at how long between each usage of a word it takes for them to use it again. 
@@ -20,17 +20,17 @@ To do this, I split the tokenized word data into 3 different data sets, containi
 
 Looking at the graphs, we can see that it is hard to truly parse any information from this just by looking at it. However, we can see that EAP oftens goes longer without using "and" and "but", but shorter amount of time or "which". This could be symptomatic of his writing style being one where he keeps a lot hidden from the reader until certain points in the text where he does a big reveal. 
 
-![Between Word Freq And](../spring2018-project1-krwarner/figs/auth_and.png)
+![Between Word Freq And](figs/auth_and.png)
 
-![Between Word Freq But](../spring2018-project1-krwarner/figs/auth_but.png)
+![Between Word Freq But](figs/auth_but.png)
 
-![Between Word Freq Which](../spring2018-project1-krwarner/figs/auth_which.png)
+![Between Word Freq Which](figs/auth_which.png)
 
-![Between Word Freq time](../spring2018-project1-krwarner/figs/auth_time.png)
+![Between Word Freq time](figs/auth_time.png)
 
 Here is a look at the mean frequency between "and", "but", and "which"
 
-![Between Word Freq And But Which](../spring2018-project1-krwarner/figs/and_but_which.png)
+![Between Word Freq And But Which](figs/and_but_which.png)
 
 Why might this type of frequency analysis be interesting in identifying particular authors? Although, the inference may be hard to tell from visual inspection a lot could be done with this. 
 
@@ -41,21 +41,21 @@ Why might this type of frequency analysis be interesting in identifying particul
 #Step 4 - Simple Data Visualization
 The data that we see visualized here can help us explain a little more of what we found prior to this. Reasons why EAP might use more of a certain word could be because of the fact that he just uses more words in general, although his senetence length is likely to be shorter than the other authors. Overall, all the authors seem to have a similar distribution for their word length, with EAP having ever so slightly longer words on average. 
 
-![Simple Data Vis](../spring2018-project1-krwarner/figs/distr.png)
+![Simple Data Vis](figs/distr.png)
 
 #Step 5 - TF-IDF
 With this analysis it is easier to see what unique words each author uses. Many times these unique words are names for obvious reasons. However, each author does have their own unique colloquialisms and in the case of HPL, even makes up his own words. 
 
-![TF IDF 1](../spring2018-project1-krwarner/figs/tf_idf.png)
+![TF IDF 1](figs/tf_idf.png)
 
-![TF IDF 1](../spring2018-project1-krwarner/figs/tf_idf2.png)
+![TF IDF 1](figs/tf_idf2.png)
 
 #Step 6 - Sentiment Analysis
 In this we look at various sentiments from the words each author uses. This sentiment, positive, negative, or otherwise, is used to analyze the sentiment of single words, so in context the sentiment can be completely different. However, when looking at how many times a word is used by an author it can give you an overall idea about the sentiment of their writing. 
 
-![Sentiment](../spring2018-project1-krwarner/figs/sentiment.png)
+![Sentiment](figs/sentiment.png)
 
-![Sentiment by Author](../spring2018-project1-krwarner/figs/auth_sentiment.png)
+![Sentiment by Author](figs/auth_sentiment.png)
 
 #Step 7 - Myers Briggs Personality Analysis
 Building off the sentiment and word usage, you can also begin to understand the personalities of each author and how that might sway the way they write. My combining all of each author's corpus and calling the uClassify API Jon Kagstrom, which was trained on the data set produced by Jensen & DiTiberio, 1989 in a study, we can analyze the 4 different aspects of Myers Briggs using binary classifiers for: Attitude, Lifestyle, Perception, and Judgement.
